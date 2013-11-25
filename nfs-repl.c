@@ -6,39 +6,22 @@
 #include <inttypes.h>
 
 #include <nfsc/libnfs.h>
-//#include <nfsc/libnfs-raw.h>
-//#include <nfsc/libnfs-raw-nfs.h>
-//#include <nfsc/libnfs-raw-nlm.h>
+#include <nfsc/libnfs-raw.h>
+#include <nfsc/libnfs-raw-nfs.h>
+#include <nfsc/libnfs-raw-nlm.h>
+#include "libnfs-glue.h"
 
-int main(int argc, char *argv[]) {
+int print_list (struct nfs_context *nfs) {
 
     int ret;
-    struct nfs_context *nfs = NULL;
-    struct nfsdir *nfsdir;
-    struct nfsdirent *nfsdirent;
-
     struct stat st;
-
-    char *server = argv[1];
-    char *export = "/local/nfs_server";
-
-    nfs = nfs_init_context ();
-    if (nfs == NULL) {
-        printf ("init_context has failed.\n");
-	goto finished;
-    }
-
-    ret = nfs_mount (nfs, server, export);
-    if (ret != 0) {
-	printf ("nfs_mount to server=%s export=%s has failed. Error: %s\n",
-		server, export, nfs_get_error (nfs));
-	goto finished;
-    }
+    struct nfsdirent *nfsdirent;
+    struct nfsdir *nfsdir;
 
     ret = nfs_opendir (nfs, "/", &nfsdir);
     if (ret != 0) {
         printf ("opendir has failed. Error:%s\n", nfs_get_error (nfs));
-	goto finished;
+	return ret;
     }
 
     while ((nfsdirent = nfs_readdir (nfs, nfsdir)) != NULL) {
@@ -95,6 +78,34 @@ int main(int argc, char *argv[]) {
 	printf (" %s\n", nfsdirent->name);
     }
     nfs_closedir (nfs, nfsdir);
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+
+    int ret;
+    struct nfs_context *nfs = NULL;
+
+    char *server = argv[1];
+    char *export = "/local/nfs_server";
+
+    nfs = nfs_init_context ();
+    if (nfs == NULL) {
+        printf ("init_context has failed.\n");
+	goto finished;
+    }
+
+    ret = nfs_mount (nfs, server, export);
+    if (ret != 0) {
+	printf ("nfs_mount to server=%s export=%s has failed. Error: %s\n",
+		server, export, nfs_get_error (nfs));
+	goto finished;
+    }
+
+    ret = print_list (nfs);
+    if (ret != 0) {
+	goto finished;
+    }
 
 finished:
     if (nfs != NULL) {
