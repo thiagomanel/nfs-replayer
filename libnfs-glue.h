@@ -1,5 +1,25 @@
+typedef struct _tree_t {
+    nfs_fh3 key;
+    nfs_fh3 fh;
+    off_t  file_size;
+    struct _tree_t *parent;
+    struct _tree_t *left;
+    struct _tree_t *right;
+} tree_t;
+
+typedef struct nfsio {
+    struct nfs_context *nfs;
+    struct rpc_context *nlm;
+    int child;
+    unsigned long xid;
+    int xid_stride;
+    tree_t *fhandles;
+} nfsio;
+
 
 struct nfsio *nfsio_connect(const char *url, int child, int initial_xid, int xid_stride, int nlm);
+struct nfsio *do_nfsio_connect (const char *server, const char *export);
+
 void nfsio_disconnect(struct nfsio *nfsio);
 nfsstat3 nfsio_getattr(struct nfsio *nfsio, const char *name, fattr3 *attributes);
 nfsstat3 nfsio_setattr(struct nfsio *nfsio, const char *name, fattr3 *attributes);

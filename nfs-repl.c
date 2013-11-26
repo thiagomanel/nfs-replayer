@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <time.h>
@@ -9,7 +10,9 @@
 #include <nfsc/libnfs-raw.h>
 #include <nfsc/libnfs-raw-nfs.h>
 #include <nfsc/libnfs-raw-nlm.h>
+
 #include "libnfs-glue.h"
+#include "nfsio.h"
 
 int print_list (struct nfs_context *nfs) {
 
@@ -84,33 +87,60 @@ int print_list (struct nfs_context *nfs) {
 int main(int argc, char *argv[]) {
 
     int ret;
+    uint64_t count, offset;
     struct nfs_context *nfs = NULL;
+    struct nfsfh* creat_fh = NULL;
+    struct nfsfh* open_fh = NULL;
 
+    char * buf = (char*) malloc (sizeof (char) * 4096);
     char *server = argv[1];
     char *export = "/local/nfs_server";
+    nfsio * io = do_nfsio_connect (server, export);
 
-    nfs = nfs_init_context ();
-    if (nfs == NULL) {
-        printf ("init_context has failed.\n");
-	goto finished;
-    }
+    //list root
+    print_list (io->nfs);
 
-    ret = nfs_mount (nfs, server, export);
-    if (ret != 0) {
-	printf ("nfs_mount to server=%s export=%s has failed. Error: %s\n",
-		server, export, nfs_get_error (nfs));
-	goto finished;
-    }
+    printf ("mkdir\n");
+    nfs_mkdir (io->nfs, "/new_dir0");
+    nfs_mkdir (io->nfs, "/new_dir1");
+    print_list (io->nfs);
 
-    ret = print_list (nfs);
-    if (ret != 0) {
-	goto finished;
-    }
+    printf ("rename dir\n");
+    nfs_rename (io->nfs, "/new_dir0", "/new_dir0_renamed");
+    print_list (io->nfs);
 
-finished:
-    if (nfs != NULL) {
-        nfs_destroy_context (nfs);
-    }
-    return 0;
+    printf ("rmdir\n");
+    nfs_rmdir (io->nfs, "/new_dir1");
+    print_list (io->nfs);
+
+    printf ("creat\n");
+    struct nfsfh* fh = NULL;
+    nfs_creat (io->nfs, "/newfile", 0660, &creat_fh);
+    print_list (io->nfs);
+
+    printf ("open\n");
+    ret = nfs_open (io->nfs, "/newfile", O_RDONLY, &open_fh);
+    printf ("open ret=%d\n", ret);
+
+    offset = 0;
+    count = 4096;
+
+    printf ("pwrite\n");
+    ret = nfs_pwrite (io->nfs, open_fh, offset, count, buf);
+    printf ("pwrite ret=%d\n", ret);
+
+    printf ("pread\n");
+    ret = nfs_pread (io->nfs, open_fh, offset, count, buf);
+    printf ("pread ret=%d\n", ret);
+
+    printf ("close\n");
+    ret = nfs_close (io->nfs, open_fh);
+    printf ("close ret=%d\n", ret);
+
+    printf ("unlink\n");
+    nfs_unlink (io->nfs, "/newfile");
+    print_list (io->nfs);
+
+    return ret;
 }
 

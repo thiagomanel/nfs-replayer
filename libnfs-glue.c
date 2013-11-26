@@ -49,7 +49,7 @@ struct nfs_fh3 *nfs_get_rootfh(struct nfs_context *nfs);
 void nfs_set_error(struct nfs_context *nfs, char *error_string, ...);
 int rpc_nfs_pathconf_async(struct rpc_context *rpc, rpc_cb cb, struct nfs_fh3 *fh, void *private_data);
 
-typedef struct _tree_t {
+/**typedef struct _tree_t {
 	nfs_fh3 key;
 	nfs_fh3 fh;
 	off_t  file_size;
@@ -59,14 +59,14 @@ typedef struct _tree_t {
 } tree_t;
 
 
-struct nfsio {
+typedef struct nfsio {
 	struct nfs_context *nfs;
 	struct rpc_context *nlm;
 	int child;
 	unsigned long xid;
 	int xid_stride;
 	tree_t *fhandles;
-};
+} nfsio;*/
 
 static void set_xid_value(struct nfsio *nfsio)
 {
@@ -438,6 +438,42 @@ void nlm_connect_cb(struct rpc_context *rpc _U_, int status _U_,
 	struct nfsio_cb_data *cb_data = private_data;
 
 	cb_data->is_finished = 1;
+}
+
+struct nfsio *do_nfsio_connect (const char *server, const char *export) {
+
+    struct nfsio *nfsio;
+    struct nfs_fh3 *root_fh;
+
+    if (export == NULL) {
+        fprintf (stderr, "NULL export\n");
+        return NULL;
+    }
+
+    nfsio = malloc (sizeof (struct nfsio));
+    if (nfsio == NULL) {
+        fprintf (stderr, "Failed to malloc nfsio\n");
+	return NULL;
+    }
+    memset (nfsio, 0, sizeof (struct nfsio));
+
+    nfsio->nfs = nfs_init_context ();
+    if (nfsio->nfs == NULL) {
+        fprintf (stderr, "Failed to init_context\n");
+        return NULL;
+    }
+
+    if (nfs_mount (nfsio->nfs, server, export) != 0) {
+        fprintf (stderr, "Failed to mount server=%s export=%s. Error:%s\n",
+		 server, export, nfs_get_error (nfsio->nfs));
+        return NULL;
+    }
+
+    root_fh = nfs_get_rootfh (nfsio->nfs);
+    insert_fhandle (nfsio, "/", root_fh->data.data_val, root_fh->data.data_len,
+		    0);
+
+    return nfsio;
 }
 
 struct nfsio *nfsio_connect(const char *url, int child, int initial_xid, int xid_stride, int nlm)

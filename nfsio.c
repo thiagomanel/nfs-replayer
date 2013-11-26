@@ -27,7 +27,9 @@
 #include <nfsc/libnfs-raw.h>
 #include <nfsc/libnfs-raw-nlm.h>
 #include <nfsc/libnfs-raw-nfs.h>
+
 #include "libnfs-glue.h"
+#include "nfsio.h"
 
 #define discard_const(ptr) ((void *)((intptr_t)(ptr)))
 #define ZERO_STRUCT(x) memset(&(x), 0, sizeof(x))
@@ -366,6 +368,13 @@ static void nfs3_lookup(struct dbench_op *op)
 	}
 }
 
+void do_nfs3_create (nfsio * nio, const char *name) {
+
+    nfsstat3 res;
+    res = nfsio_create(nio, name);
+    printf("CREATE \"%s\" actual(%x)\n", name, res);
+}
+
 static void nfs3_create(struct dbench_op *op)
 {
 	nfsstat3 res;
@@ -442,6 +451,14 @@ static void nfs3_access(struct dbench_op *op)
 		       op->child->line, op->fname, res, op->status);
 		failed(op->child);
 	}
+}
+
+void do_nfs3_mkdir (nfsio *nio, const char *name) {
+
+    nfsstat3 res;
+    res = nfsio_mkdir (nio, name);
+    //FIXME: how to assign this op->status value ? is it 0 ?
+    printf ("MKDIR \"%s\" actual(%x)\n", name, res);
 }
 
 static void nfs3_mkdir(struct dbench_op *op)
@@ -590,6 +607,13 @@ static void nfs3_test(struct dbench_op *op)
 	}
 }
 
+void do_nfs3_rename(nfsio * nio, const char * oldname, const char *newname) {
+
+	nfsstat3 res;
+	res = nfsio_rename (nio, oldname, newname);
+	printf("RENAME \"%s\"->\"%s\" actual (%x)\n", oldname, newname, res);
+}
+
 static void nfs3_rename(struct dbench_op *op)
 {
 	nfsstat3 res;
@@ -623,40 +647,4 @@ static int nfs3_init(void)
 	nfsio_disconnect(handle);
 	return 0;
 }
-
-/**static struct backend_op ops[] = {
-	{ "Deltree",  nfs3_deltree },
-	{ "ACCESS3",  nfs3_access },
-	{ "COMMIT3",  nfs3_commit },
-	{ "CREATE3",  nfs3_create },
-	{ "FSINFO3",  nfs3_fsinfo },
-	{ "FSSTAT3",  nfs3_fsstat },
-	{ "GETATTR3", nfs3_getattr },
-	{ "LINK3",    nfs3_link },
-	{ "LOOKUP3",  nfs3_lookup },
-	{ "MKDIR3",   nfs3_mkdir },
-	{ "PATHCONF3", nfs3_pathconf },
-	{ "READ3",    nfs3_read },
-	{ "READDIRPLUS3", nfs3_readdirplus },
-	{ "READLINK3", nfs3_readlink },
-	{ "REMOVE3",  nfs3_remove },
-	{ "RENAME3",  nfs3_rename },
-	{ "RMDIR3",   nfs3_rmdir },
-	{ "SETATTR3", nfs3_setattr },
-	{ "SYMLINK3", nfs3_symlink },
-	{ "WRITE3",   nfs3_write },
-
-	{ "LOCK4",    nfs3_lock },
-	{ "UNLOCK4",  nfs3_unlock },
-	{ "TEST4",    nfs3_test },
-	{ NULL, NULL}
-};
-
-struct nb_operations nfs_ops = {
-	.backend_name = "nfsbench",
-	.init	      = nfs3_init,
-	.setup 	      = nfs3_setup,
-	.cleanup      = nfs3_cleanup,
-	.ops          = ops
-};*/
 
